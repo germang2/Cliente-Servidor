@@ -1,23 +1,31 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <zmqpp/zmqpp.hpp>
+#include <SFML/Audio.hpp>
 
 using namespace std;
 using namespace zmqpp;
+using namespace sf;
+
+void messageToFile(const message& msg, const string& fileName) {
+	const void *data;
+	msg.get(&data, 1);
+	size_t size = msg.size(1);
+
+	ofstream ofs(fileName, ios::binary);
+	ofs.write((char*)data, size);
+}
 
 int main(int argc, char** argv) {
 	cout << "This is the client\n";
 
-	if (argc != 2) {
-		cerr << "Should be called: " << argv[0] << " <op> operand1 operand2\n";
-		return 1;
-	}
-
 	context ctx;
-	socket s(ctx, socket_type::req);//request
-
+	socket s(ctx, socket_type::req);
 	cout << "Connecting to tcp port 5555\n";
-	s.connect("tcp://192.168.8.66:5555");
+	s.connect("tcp://localhost:5555");
+
+	Music music;
 
 	cout << "Sending  some work!\n";
 
@@ -25,26 +33,38 @@ int main(int argc, char** argv) {
 	string operation(argv[1]);
 
 	m << operation;
+
+	if(argc == 3) {
+		string file(argv[2]);
+		m << file;
+	}
+
 	s.send(m);
 
 	message answer;
 	s.receive(answer);
 
-	string op;
-	answer >> op;
-
-	if(op == "list"){
-		size_t numSongs; //for save the number of songs with songs.size()
+	string result;
+	answer >> result;
+	if (result == "list") {
+		size_t numSongs;
 		answer >> numSongs;
-		cout<<"Availbable songs: " << songs << endl;
-		string song;
-		for (int i = 0; i < numSongs; ++i){
-			answer >> song;
-			cout << song << endl;
+		cout << "Available songs: " << numSongs << endl;
+		for(int i = 0; i < numSongs; i++) {
+			string s;
+			answer >> s;
+			cout << s << endl;
 		}
 
+	} else if (result == "file"){
+		messageToFile(answer,"song.ogg");
+		music.openFromFile("song.ogg");
+		music.play();
+		int x;
+		cin >> x;
+	} else {
+		cout << "Don't know what to do!!!" << endl;
 	}
 
-    cout << "Finished\n";
 	return 0;
 }

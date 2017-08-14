@@ -3,7 +3,7 @@
 #include <zmqpp/zmqpp.hpp>
 
 using namespace std;
-using namespace zmqpp;
+using namespace zmqpp;   
 
 int main(int argc, char** argv) {
 	cout << "This is the client\n";

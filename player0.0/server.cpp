@@ -3,57 +3,68 @@
 #include <string>
 #include <cassert>
 #include <unordered_map>
+#include <fstream>
+
 
 using namespace std;
 using namespace zmqpp;
 
-int main(int args, char** argv) {
-  cout << "This is the server\n";
+vector<char> readFileToBytes(const string& fileName) {
+	ifstream ifs(fileName, ios::binary | ios::ate);
+	ifstream::pos_type pos = ifs.tellg();
 
+	vector<char> result(pos);
+
+	ifs.seekg(0, ios::beg);
+	ifs.read(result.data(), pos);
+
+	return result;
+}
+
+void fileToMesage(const string& fileName, message& msg) {
+	vector<char> bytes = readFileToBytes(fileName);
+	msg.add_raw(bytes.data(), bytes.size());
+}
+
+int main(int argc, char** argv) {
   context ctx;
-  socket s(ctx, socket_type::rep); //rep = replay
+  socket s(ctx, socket_type::rep);
+  s.bind("tcp://*:5555");
 
   string path(argv[1]);
-  unordered_map<string,string> songs; //hashtable with song's list
+  unordered_map<string,string> songs;
   songs["s1"] = path + "s1.ogg";
   songs["s2"] = path + "s2.ogg";
   songs["s3"] = path + "s3.ogg";
 
-
-
-  cout << "Binding socket to tcp port 5555\n";
-  s.bind("tcp://*:5555");
-
   cout << "Start serving requests!\n";
-
   while(true) {
     message m;
-    cout << "HOLA 11111111111111111" << endl;
     s.receive(m);
 
-    string op; //this is the command to execute
+    string op;
     m >> op;
 
-    cout <<"Action: " << op <<endl;
-
-    if(op == "list"){
-      // Use case 1: send song's list
+    cout << "Action:  " << op << endl;
+    if (op == "list") {  // Use case 1: Send the songs
       message n;
       n << "list" << songs.size();
-      for (const auto& p : songs){
-        n << p.first
-      }
+      for(const auto& p : songs)
+        n << p.first;
       s.send(n);
-      
-    } else if(op == "play"){
-      //  Use case 2: send song file
-    }else{
-      cout << "Invalid operation requested!" << endl;
+    } else if(op == "play") {
+      // Use case 2: Send song file
+      string songName;
+      m >> songName;
+      cout << "sending song " << songName
+           << " at " << songs[songName] << endl;
+			message n;
+			n << "file";
+			fileToMesage(songs[songName], n);
+			s.send(n);
+    } else {
+      cout << "Invalid operation requested!!\n";
     }
-
-    message response;
-    response << answer;
-    s.send(response);
   }
 
   cout << "Finished\n";

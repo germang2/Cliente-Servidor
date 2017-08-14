@@ -3,7 +3,7 @@
 #include <string>
 #include <cassert>
 
-using namespace std;
+using namespace std;  
 using namespace zmqpp;
 
 int main() {
