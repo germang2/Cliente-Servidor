@@ -10,7 +10,7 @@ LIBS=-lzmq -lzmqpp
 all: client server
 
 client: client.cpp
-	$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) client.cpp -o client $(LIBS) -lsfml-audio
+	$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) client.cpp -o client $(LIBS) -pthread -lsfml-audio
 
 server: server.cpp
 	$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) server.cpp -o server $(LIBS)

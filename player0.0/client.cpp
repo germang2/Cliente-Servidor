@@ -3,6 +3,7 @@
 #include <string>
 #include <zmqpp/zmqpp.hpp>
 #include <SFML/Audio.hpp>
+#include <thread>
 
 using namespace std;
 using namespace zmqpp;
@@ -17,6 +18,15 @@ void messageToFile(const message& msg, const string& fileName) {
 	ofs.write((char*)data, size);
 }
 
+void playSong(){
+	Music music;
+	music.openFromFile("song.ogg");
+	music.play();
+	while(music.getStatus() == SoundSource::Playing){
+		cout<<"Play Song"<<endl;
+	}
+}
+
 int main(int argc, char** argv) {
 	cout << "This is the client\n";
 
@@ -25,45 +35,52 @@ int main(int argc, char** argv) {
 	cout << "Connecting to tcp port 5555\n";
 	s.connect("tcp://localhost:5555");
 
-	Music music;
+	while(true){
 
-	cout << "Sending  some work!\n";
+		Music music;
 
-	message m;
-	string operation(argv[1]);
+		cout << "Sending  some work!\n";
 
-	m << operation;
+		cout<<"Write operation:\nlist\nplay song\n";
 
-	if(argc == 3) {
-		string file(argv[2]);
-		m << file;
-	}
+		message m;
+		string operation;
+		cin>>operation;
+		m << operation;
 
-	s.send(m);
 
-	message answer;
-	s.receive(answer);
-
-	string result;
-	answer >> result;
-	if (result == "list") {
-		size_t numSongs;
-		answer >> numSongs;
-		cout << "Available songs: " << numSongs << endl;
-		for(int i = 0; i < numSongs; i++) {
-			string s;
-			answer >> s;
-			cout << s << endl;
+		if(operation == "play") {
+			string file;
+			cin>>file;
+			m << file;
 		}
 
-	} else if (result == "file"){
-		messageToFile(answer,"song.ogg");
-		music.openFromFile("song.ogg");
-		music.play();
-		int x;
-		cin >> x;
-	} else {
-		cout << "Don't know what to do!!!" << endl;
+		s.send(m);
+
+		message answer;
+		s.receive(answer);
+
+		string result;
+		answer >> result;
+		if (result == "list") {
+			size_t numSongs;
+			answer >> numSongs;
+			cout << "Available songs: " << numSongs << endl;
+			for(int i = 0; i < numSongs; i++) {
+				string s;
+				answer >> s;
+				cout << s << endl;
+			}
+
+		} else if (result == "file"){
+			messageToFile(answer,"song.ogg");
+			//Launch a thread
+			thread t1(playSong);
+			//Join the thread with the main threadt
+
+		} else {
+			cout << "Don't know what to do!!!" << endl;
+		}
 	}
 
 	return 0;
