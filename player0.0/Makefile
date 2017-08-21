@@ -1,8 +1,8 @@
 CC=g++ -std=c++11
 #In my portatil
-#ZMQ_PATH=/usr/local
+ZMQ_PATH=/usr/local
 #In university pc
-ZMQ_PATH=/home/utp/zmq
+#ZMQ_PATH=/home/utp/zmq
 ZMQ_INC=$(ZMQ_PATH)/include
 ZMQ_LIB=$(ZMQ_PATH)/lib
 LIBS=-lzmq -lzmqpp
@@ -10,7 +10,7 @@ LIBS=-lzmq -lzmqpp
 all: client server
 
 client: client.cpp
-	$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) client.cpp -o client $(LIBS) -pthread -lsfml-audio
+	$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) client.cpp -o client.out $(LIBS) -pthread -lsfml-audio
 
 server: server.cpp
-	$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) server.cpp -o server $(LIBS)
+	$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) server.cpp -o server.out $(LIBS)
