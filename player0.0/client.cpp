@@ -53,7 +53,7 @@ public:
     return val;
   }
 
-  bool isEmpty(void)
+  bool isEmpty(void) 
   {
     return q.empty();
   }
@@ -65,12 +65,18 @@ private:
 };
 #endif
 
-void messageToFile(const message& msg){
+void messageToFile(const message& msg, bool part){
 	const void *data;
-	msg.get(&data, 1); // the first is the name "file", we don't need it
-	size_t size = msg.size(1);
+	msg.get(&data, 2); // the first is the name "file", the second is the parts, we don't need it here
+	size_t size = msg.size(2);
 
 	ofstream ofs("current_song.ogg", ios::binary);
+
+	if(part == true){
+		unsigned long pos = ofs.tellp();
+		ofs.seekp(pos);
+	}
+
 	ofs.write((char*)data, size);
 }
 
@@ -79,24 +85,41 @@ void songManager(Music *music, SafeQueue<string> &playList, bool &stop) {
 	socket s(ctx, socket_type::req);
 	s.connect("tcp://localhost:5555");
 	message m, n;
-    string result;
+    string result, current_song = "";
+    int parts = -1, current_part = 0;
 
 	while (true) {
-		stop = false;
-		string nextSong = playList.dequeue();
-		m << "play" << nextSong; // ask for the song
-	    s.send(m);
-	    s.receive(n);
-	    n >> result;
+		if(current_part > parts || stop){
+			stop = false;
+			string nextSong = playList.dequeue();
+			current_song = nextSong;
+			m << "play" << nextSong; // ask for the song
+		    s.send(m);
+		    s.receive(n);
+		    n >> result;
+		    n >> parts;
 
-	    if (result == "file") {
-	      cout << "nextSong : " << nextSong << endl;
-		  messageToFile(n);
-	      music->openFromFile("current_song.ogg");
-	      music->play();
+
+		    if (result == "file") {
+		      cout << "nextSong : " << nextSong << endl;
+			  messageToFile(n, false);
+		      music->openFromFile("current_song.ogg");
+		      music->play();
+		      current_part = 0;
+			}
+		}else{ //Ask for the next part
+			current_part++;
+			m << "nextPart" << current_song << current_part;
+			s.send(m);
+			s.receive(n);
+			n >> result;
+			n >> parts;
+			messageToFile(n, true);
+			music->play();
 		}
-
+		
 		while (music->getStatus() == SoundSource::Playing and !stop) {
+			
 			continue;
 		}
 	}

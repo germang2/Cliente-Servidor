@@ -12,19 +12,12 @@ using namespace std;
 using namespace zmqpp;
 
 vector<char> readFileToBytes(const string& fileName) {
-  cout << "DEBUG 1, fileName:" << fileName <<endl;
+  
   ifstream ifs("music/" + fileName, ios::binary | ios::ate);
-  if(ifs.is_open())
-    cout << "DEBUG 2" << endl;
-  else
-    cout << "ERROR OPENING FILE" << endl;
-
+  
   ifstream::pos_type pos = ifs.tellg();
-
-  cout << "DEBUG 3: " << pos <<endl;
   
   vector<char> result(pos);
-  cout << "DEBUG 4" << endl;
 
   ifs.seekg(0, ios::beg);
   ifs.read(result.data(), pos);
@@ -85,6 +78,7 @@ int main(int argc, char** argv) {
   context ctx;
   socket s(ctx, socket_type::rep);
   s.bind("tcp://*:5555");
+  int part = 0;
 
   string path(argv[1]);
   unordered_map<string,int> songs = readFilesDirectory(path + '*');
@@ -115,7 +109,7 @@ int main(int argc, char** argv) {
       string songName;
       m >> songName;
       cout << "sending song " << songName << endl; //" at " << songs[songName] << endl;
-      n << "file";
+      n << "file" << songs[songName];
       fileToMesage(songName, n, 0);
     } else if (op == "add") {
       string songName;
@@ -129,7 +123,15 @@ int main(int argc, char** argv) {
       }
     } else if (op == "next") {
       n << "next";
-    } else {
+    } else if(op == "nextPart"){ //Sends the next part of a song
+        string songName;
+        m >> songName;
+        m >> part;
+        cout << "Sending part " << part << " of song " << songName << endl;
+        n << "file" << songs[songName];
+        fileToMesage(songName, n, part);
+
+      } else {
       n << "Invalid operation requested!!";
     }
     s.send(n);
