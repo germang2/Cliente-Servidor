@@ -65,12 +65,12 @@ private:
 };
 #endif
 
-void messageToFile(const message& msg, const string& fileName){
+void messageToFile(const message& msg){
 	const void *data;
 	msg.get(&data, 1); // the first is the name "file", we don't need it
 	size_t size = msg.size(1);
 
-	ofstream ofs(fileName, ios::binary);
+	ofstream ofs("current_song.ogg", ios::binary);
 	ofs.write((char*)data, size);
 }
 
@@ -79,21 +79,21 @@ void songManager(Music *music, SafeQueue<string> &playList, bool &stop) {
 	socket s(ctx, socket_type::req);
 	s.connect("tcp://localhost:5555");
 	message m, n;
-  string result;
+    string result;
 
 	while (true) {
 		stop = false;
 		string nextSong = playList.dequeue();
 		m << "play" << nextSong; // ask for the song
-    s.send(m);
-    s.receive(n);
-    n >> result;
+	    s.send(m);
+	    s.receive(n);
+	    n >> result;
 
-    if (result == "file") {
-      cout << "nextSong : " << nextSong << endl;
-			messageToFile(n, nextSong + ".ogg");
-      music->openFromFile(nextSong + ".ogg");
-      music->play();
+	    if (result == "file") {
+	      cout << "nextSong : " << nextSong << endl;
+		  messageToFile(n);
+	      music->openFromFile("current_song.ogg");
+	      music->play();
 		}
 
 		while (music->getStatus() == SoundSource::Playing and !stop) {
