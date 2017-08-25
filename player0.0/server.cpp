@@ -12,19 +12,23 @@ using namespace std;
 using namespace zmqpp;
 
 vector<char> readFileToBytes(const string& fileName) {
-  ifstream ifs(fileName, ios::binary | ios::ate);
+  
+  ifstream ifs("music/" + fileName, ios::binary | ios::ate);
+  
   ifstream::pos_type pos = ifs.tellg();
-
+  
   vector<char> result(pos);
 
   ifs.seekg(0, ios::beg);
   ifs.read(result.data(), pos);
 
+  ifs.close();
+
   return result;
 }
 
-void fileToMesage(const string& fileName, message& msg) {
-  vector<char> bytes = readFileToBytes(fileName);
+void fileToMesage(const string& fileName, message& msg, int part) {
+  vector<char> bytes = readFileToBytes(fileName + "_" + to_string(part));
   msg.add_raw(bytes.data(), bytes.size());
 }
 
@@ -40,20 +44,30 @@ vector<string> split(string s, char tok) { // split a string by a token especifi
   return v;
 }
 
-unordered_map<string,string> readFilesDirectory(string path){
+//Reads the songs and counts how many parts have
+unordered_map<string,int> readFilesDirectory(string path){
   glob_t glob_result;
   glob(path.c_str(), GLOB_TILDE, NULL, &glob_result);
-  unordered_map<string,string> ans;
+  unordered_map<string,int> ans; // name of the song and its parts
   for(unsigned int i = 0; i < glob_result.gl_pathc; ++i){
 
-    string file = string(glob_result.gl_pathv[i]);
-    vector<string> splited = split(file.erase(0, path.size() - 1), '.'); // deletes the path of the string
+    string file = string(glob_result.gl_pathv[i]); // eg: '../music/s1.0.ogg'
+    //dbg(file);
+    string tmp = file.erase(0, path.size() - 1); // eg: 's1.0.ogg'
+    //dbg(tmp);
+    vector<string> splited = split(tmp, '_'); // deletes the path of the string:
+    //dbg(splited.size());
     string fileName = splited[0];
-    if (splited.size() <= 1) continue;
-    string fileExtension = splited[1]; // get the extension
+    //dbg(fileName);
+    if (splited.size() == 2) { // splitted songs
+      string cropNumber = splited[1];
+      //dbg(cropNumber);
 
-    if (fileExtension == "ogg") { // if is ogg
-      ans[fileName] = path.substr(0, path.size()-1) + file; // removes the '*' from the path
+      if (ans.count(fileName) >= 1) { // if the song is already in the hash table
+        ans[fileName] += 1; // counts how many parts a song has
+      } else { // creates the entry for the hash
+        ans[fileName] = 1;
+      }
     }
   }
   globfree(&glob_result);
@@ -64,14 +78,15 @@ int main(int argc, char** argv) {
   context ctx;
   socket s(ctx, socket_type::rep);
   s.bind("tcp://*:5555");
+  int part = 0;
 
   string path(argv[1]);
-  unordered_map<string,string> songs = readFilesDirectory(path + '*');
+  unordered_map<string,int> songs = readFilesDirectory(path + '*');
 
   cout << "Reading files in " << path << " : " << endl;
 
   for (const auto &file : songs) {
-    cout << "first : " << file.first << ", second : " << file.second << endl;
+    cout << "first : " << file.first << ", parts : " << file.second << endl;
   }
 
 
@@ -93,9 +108,9 @@ int main(int argc, char** argv) {
     } else if(op == "play") { // Use case 2: Send song file
       string songName;
       m >> songName;
-      cout << "sending song " << songName << " at " << songs[songName] << endl;
-      n << "file";
-      fileToMesage(songs[songName], n);
+      cout << "sending song " << songName << endl; //" at " << songs[songName] << endl;
+      n << "file" << songs[songName];
+      fileToMesage(songName, n, 0);
     } else if (op == "add") {
       string songName;
       m >> songName;
@@ -108,7 +123,15 @@ int main(int argc, char** argv) {
       }
     } else if (op == "next") {
       n << "next";
-    } else {
+    } else if(op == "nextPart"){ //Sends the next part of a song
+        string songName;
+        m >> songName;
+        m >> part;
+        cout << "Sending part " << part << " of song " << songName << endl;
+        n << "file" << songs[songName];
+        fileToMesage(songName, n, part);
+
+      } else {
       n << "Invalid operation requested!!";
     }
     s.send(n);
