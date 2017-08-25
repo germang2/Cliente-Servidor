@@ -28,7 +28,7 @@ vector<char> readFileToBytes(const string& fileName) {
 }
 
 void fileToMesage(const string& fileName, message& msg, int part) {
-  vector<char> bytes = readFileToBytes(fileName + "_0" + to_string(part));
+  vector<char> bytes = readFileToBytes(fileName + "_" + to_string(part));
   msg.add_raw(bytes.data(), bytes.size());
 }
 
