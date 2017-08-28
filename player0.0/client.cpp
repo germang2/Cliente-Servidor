@@ -4,68 +4,15 @@
 #include <fstream>
 #include <SFML/Audio.hpp>
 #include <thread>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
 #include <unistd.h>
 #include <SFML/System/Time.hpp>
+#include "safequeue.h"
 
 using namespace std;
 using namespace sf;
 using namespace zmqpp;
 
-#ifndef SAFE_QUEUE
-#define SAFE_QUEUE
 
-
-// A threadsafe-queue.
-template <class T>
-class SafeQueue
-{
-public:
-  SafeQueue(void)
-    : q()
-    , m()
-    , c()
-  {}
-
-  ~SafeQueue(void)
-  {}
-
-  // Add an element to the queue.
-  void enqueue(T t)
-  {
-    std::lock_guard<std::mutex> lock(m);
-    q.push(t);
-    c.notify_one();
-  }
-
-  // Get the "front"-element.
-  // If the queue is empty, wait till a element is avaiable.
-  T dequeue(void)
-  {
-    std::unique_lock<std::mutex> lock(m);
-    while(q.empty())
-    {
-      // release lock as long as the wait and reaquire it afterwards.
-      c.wait(lock);
-    }
-    T val = q.front();
-    q.pop();
-    return val;
-  }
-
-  bool isEmpty(void) 
-  {
-    return q.empty();
-  }
-
-private:
-  std::queue<T> q;
-  mutable std::mutex m;
-  std::condition_variable c;
-};
-#endif
 
 void messageToFile(const message& msg, bool part){
 	const void *data;
@@ -81,10 +28,10 @@ void messageToFile(const message& msg, bool part){
 	}
 }
 
-void songManager(Music *music, SafeQueue<string> &playList, bool &stop) {
+void songManager(Music *music, SafeQueue<string> &playList, bool &stop, string &operation) {
 	context ctx;
 	socket s(ctx, socket_type::req);
-	s.connect("tcp://localhost:5555");
+	s.connect("tcp://192.168.8.211:5555");
 	message m, n;
     string result, current_song = "";
     int parts = 0, current_part = 0;
@@ -92,11 +39,18 @@ void songManager(Music *music, SafeQueue<string> &playList, bool &stop) {
     Time delta = seconds(5), elapsed, elapsed2, current_song_duration;
 
 	while (true) {
+
+		cout << "op: " << operation << endl;
+
+		if (operation == "exit") {
+			cout << "Bye" << endl;
+			return;
+		}
 		
 		stop = false;
 		string nextSong = playList.dequeue();
 		current_song = nextSong;
-		m << "play" << nextSong; // ask for the song
+		m << "requestSong" << nextSong; // ask for the song
 	    s.send(m);
 	    s.receive(n);
 	    n >> result;
@@ -113,7 +67,7 @@ void songManager(Music *music, SafeQueue<string> &playList, bool &stop) {
 		  elapsed = clock.restart();
 		}
 		
-		while (music->getStatus() == SoundSource::Playing and !stop) {
+		while ((music->getStatus() == SoundSource::Playing and !stop) or music->getStatus() == SoundSource::Paused) {
 			elapsed2 = clock.getElapsedTime(); // do not restart the clock
 			if((elapsed2 >= current_song_duration - delta) and (current_part < parts - 1)){
 				current_part++;
@@ -127,8 +81,23 @@ void songManager(Music *music, SafeQueue<string> &playList, bool &stop) {
 				current_song_duration = music->getDuration();
 				clock.restart();
 			}
+
+			if (operation == "exit") {
+				cout << "Bye" << endl;
+				return;
+			} 
+			
+			if (operation == "pause" and music->getStatus() != SoundSource::Paused) {
+				cout << "entra a pausar" << endl;
+				music->pause();
+				cout << music->getStatus() << endl;
+			}
+			if (operation == "play" and music->getStatus() != SoundSource::Playing) {
+				cout << "entra a des-pausar" << endl;
+				music->play();
+			}
 				
-		}
+			}
 
 	}
 	cout << "Finished!" << endl;
@@ -141,17 +110,16 @@ int main(void) {
 	socket s(ctx, socket_type::req);
 
 	cout << "Connecting to tcp port 5555" << endl;
-	s.connect("tcp://localhost:5555");
+	s.connect("tcp://192.168.8.211:5555");
 
-	//queue<string> playList;
 	SafeQueue<string> playList;
 	Music music;
 	bool stop = false;
-	thread t1(songManager, &music, ref(playList), ref(stop));
+	string operation;
+	thread t1(songManager, &music, ref(playList), ref(stop), ref(operation));
 
 	while (true) {
 		cout << "Enter operation" << endl;
-		string operation;
 		string songName = "";
 		cin >> operation;
 
@@ -163,10 +131,12 @@ int main(void) {
 			m << songName;
 		}
 		if (operation == "exit") {
+			t1.join();
+			music.stop();
 			return 0;
 		}
 		if (operation == "next") {
-      if (!playList.isEmpty()) stop = true;
+      		if (!playList.isEmpty()) stop = true;
 		}
 
 		s.send(m);

@@ -77,7 +77,7 @@ unordered_map<string,int> readFilesDirectory(string path){
 int main(int argc, char** argv) {
   context ctx;
   socket s(ctx, socket_type::rep);
-  s.bind("tcp://*:5555");
+  s.bind("tcp://192.168.8.211:5555");
   int part = 0;
 
   string path(argv[1]);
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
       for(const auto& p : songs)
         n << p.first;
 
-    } else if(op == "play") { // Use case 2: Send song file
+    } else if(op == "requestSong") { // Use case 2: Send song file
       string songName;
       m >> songName;
       cout << "sending song " << songName << endl; //" at " << songs[songName] << endl;
@@ -131,11 +131,16 @@ int main(int argc, char** argv) {
         n << "file" << songs[songName];
         fileToMesage(songName, n, part);
 
-      } else {
-      n << "Invalid operation requested!!";
+      } else if(op == "pause") {
+        n << "pause";
+      } else if (op == "play") {
+        n << "play";
+      } else { 
+        n << "Invalid operation requested!!";
+      }
+      
+      s.send(n);  
     }
-    s.send(n);
-  }
 
   cout << "Finished" << endl;
   return 0;
