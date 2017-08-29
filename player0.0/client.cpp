@@ -31,7 +31,7 @@ void messageToFile(const message& msg, bool part){
 void songManager(Music *music, SafeQueue<string> &playList, bool &stop, string &operation) {
 	context ctx;
 	socket s(ctx, socket_type::req);
-	s.connect("tcp://192.168.8.211:5555");
+	s.connect("tcp://localhost:5555");
 	message m, n;
     string result, current_song = "";
     int parts = 0, current_part = 0;
@@ -88,12 +88,12 @@ void songManager(Music *music, SafeQueue<string> &playList, bool &stop, string &
 			} 
 			
 			if (operation == "pause" and music->getStatus() != SoundSource::Paused) {
-				cout << "entra a pausar" << endl;
+				//cout << "entra a pausar" << endl;
 				music->pause();
-				cout << music->getStatus() << endl;
+				//cout << music->getStatus() << endl;
 			}
 			if (operation == "play" and music->getStatus() != SoundSource::Playing) {
-				cout << "entra a des-pausar" << endl;
+				//cout << "entra a des-pausar" << endl;
 				music->play();
 			}
 				
@@ -110,7 +110,7 @@ int main(void) {
 	socket s(ctx, socket_type::req);
 
 	cout << "Connecting to tcp port 5555" << endl;
-	s.connect("tcp://192.168.8.211:5555");
+	s.connect("tcp://localhost:5555");
 
 	SafeQueue<string> playList;
 	Music music;
@@ -118,17 +118,28 @@ int main(void) {
 	string operation;
 	thread t1(songManager, &music, ref(playList), ref(stop), ref(operation));
 
+	cout << "---------------------" << endl;
+	cout << "Operation list:" << endl;
+	cout << "* list" << endl;
+	cout << "* add <song Name>" << endl;
+	cout << "* play" << endl;
+	cout << "* stop" << endl;
+	cout << "* exit" << endl;
+	cout << "---------------------" << endl;
+
 	while (true) {
 		cout << "Enter operation" << endl;
-		string songName = "";
+		string songName = "", result = "";
 		cin >> operation;
-
-		message m;
+		message answer, m;
 		m << operation;
 
 		if (operation == "add") {
 			cin >> songName;
 			m << songName;
+			s.send(m);
+			s.receive(answer);
+			answer >> result;
 		}
 		if (operation == "exit") {
 			t1.join();
@@ -137,19 +148,21 @@ int main(void) {
 		}
 		if (operation == "next") {
       		if (!playList.isEmpty()) stop = true;
+      		continue;
+		}
+		if (operation == "list") {
+			s.send(m);
+			s.receive(answer);
+			answer >> result;
 		}
 
-		s.send(m);
+		if (operation == "play" or operation == "pause")
+			continue;
 
-		message answer;
-		s.receive(answer);
-
-		string result;
-		answer >> result;
 		if (result == "list") {
 			size_t numSongs;
 			answer >> numSongs;
-			cout << "Available songs: " << numSongs << endl;
+			cout << "Available songs : " << numSongs << endl;
 			for(int i = 0; i < numSongs; i++) {
 				string s;
 				answer >> s;
@@ -159,7 +172,7 @@ int main(void) {
 		} else if (result == "ok") { // if the song exists
 			playList.enqueue(songName);
 		}	else {
-			cout << result << endl;
+			cout << "Invalid request" << endl;
 		}
 	}
 
