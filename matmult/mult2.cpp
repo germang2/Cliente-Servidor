@@ -53,7 +53,7 @@ int main(int argc, char **argv){
     {
         Timer t("mult2");
         mult2(g, g, res);
-        cout << t.elapsed() << " ms." << endl;
+        cout << t.elapsed() << " ns." << endl;
     }
     return 0;
 }

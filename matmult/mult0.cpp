@@ -3,9 +3,16 @@
 #include <string>
 #include <cassert>
 #include "timer.hh"
+#include <fstream>
 
 using namespace std;
 using Mat = vector<vector<int>>;
+
+void saveTime(long elapsedTime){
+    ofstream ofs("time.out", ios_base::app);
+    ofs << elapsedTime << "\n" ;
+    ofs.close();
+}
 
 void mult0(const Mat &m1, const Mat &m2, Mat &res){
     int i = m1.size();      //number of rows in m1
@@ -39,7 +46,9 @@ int main(int argc, char **argv){
     {//lack to take the time of execution
         Timer t("mult0");
         mult0(g, g, res);
-        cout << t.elapsed() << " ms." << endl;
+        long elapsedTime = t.elapsed();
+        cout << elapsedTime << " ms." << endl;
+        saveTime(elapsedTime);        
     }
     return 0;
 }
