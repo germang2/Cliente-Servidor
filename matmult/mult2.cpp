@@ -10,7 +10,7 @@ using namespace std;
 using Mat = vector<vector<int>>;
 
 void saveTime(long elapsedTime){
-    ofstream ofs("time1.out", ios_base::app);
+    ofstream ofs("time2.out", ios_base::app);
     ofs << elapsedTime << "\n" ;
     ofs.close();
 }
