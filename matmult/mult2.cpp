@@ -9,6 +9,12 @@
 using namespace std;
 using Mat = vector<vector<int>>;
 
+void saveTime(long elapsedTime){
+    ofstream ofs("time1.out", ios_base::app);
+    ofs << elapsedTime << "\n" ;
+    ofs.close();
+}
+
 void dot(const Mat &m1, const Mat &m2, int a, Mat &res){
     int l = m2[0].size();   //number of cols in m2
     int j = m1[0].size();   //number of cols in m1
@@ -49,11 +55,12 @@ int main(int argc, char **argv){
         res[i].resize(g[0].size());
     }
 
-    //lack to take the time of execution
-    {
+    {//lack to take the time of execution
         Timer t("mult2");
         mult2(g, g, res);
-        cout << t.elapsed() << " ns." << endl;
+        long elapsedTime = t.elapsed();
+        cout << elapsedTime << " ms." << endl;
+        saveTime(elapsedTime);        
     }
     return 0;
 }
