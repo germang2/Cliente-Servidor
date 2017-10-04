@@ -27,14 +27,18 @@ vector<vector<int>> readGraph(string fileName){
             }
             for(int i = 0; i< g.size() ; i++)
                 for(int j = 0; j < g[i].size(); j++)
-                    g[i][j] = numeric_limits<int>::max();
+                    if(i == j)
+                        g[i][j] = 0;
+                    else        
+                        g[i][j] = numeric_limits<int>::max();
             cout << "Graph with " << nodes << " nodes" << endl;
         } else if (line[0] == 'e'){
             char e;
             int s, t, w;
             iss >> e >> s >> t >> w;
-            //cout << s << " - " << t << " : " << w << endl;
+            //cout << s << " - " << t << " : " << w << endl;           
             g[ s - 1][t - 1] = w;
+            g[ t - 1][s - 1] = w;                
         }
     }
     return g;
