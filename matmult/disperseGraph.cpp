@@ -21,6 +21,7 @@ int main(int argc, char const *argv[])
 	string fileName(argv[1]);
 	graph g = readGraph(fileName);
 
+	cout << "No hubo errores :3" << endl;
 	// print graph
 
 	return 0;
