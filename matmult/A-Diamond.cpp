@@ -1,4 +1,5 @@
 #include "lib/Graph.hh"
+#include "lib/SafeGraph.hh"
 #include "lib/timer.hh"
 #include "lib/helpers.hh"
 #include "lib/thread_pool.hh"
@@ -12,10 +13,10 @@
 
 using namespace std;
 
-void mult(Graph &m1, Graph &m2, Graph &res, int nodes) {
+void mult(SafeGraph &m1, SafeGraph &m2, SafeGraph &res, int nodes) {
   int value, min = INF;
   for (auto& v : m1.m) {
-  //   cout << v.first << " -> " << endl;
+     cout << v.first << " -> " << endl;
     for (int i = 0; i <= nodes; i++) {
       // dbg(i);
       min = INF;
@@ -40,7 +41,7 @@ void mult(Graph &m1, Graph &m2, Graph &res, int nodes) {
   }
 }
 
-void naiveMult(int times, Graph &original, Graph &current, Graph &res) {
+void naiveMult(int times, SafeGraph &original, SafeGraph &current, SafeGraph &res) {
   for (int i = 0; i < times; i++) {
     mult(original, current, res, times);
     current = res;
@@ -48,7 +49,7 @@ void naiveMult(int times, Graph &original, Graph &current, Graph &res) {
   }
 }
 
-int logMult(int p, Graph &original, Graph &current, Graph &res) {
+int logMult(int p, SafeGraph &original, SafeGraph &current, SafeGraph &res) {
   int nodes = p;
   while (p > 0) {
     Timer t("mult6");
@@ -58,7 +59,7 @@ int logMult(int p, Graph &original, Graph &current, Graph &res) {
       mult(original, current, res, nodes);
     }
     current = res;
-    //cout << "Current:" << endl;
+    cout << "Current:" << endl;
     //current.print();
     res.clear();
     p /= 2;
@@ -78,7 +79,7 @@ int main(int argc, char **argv) {
   }
   string fileName(argv[1]);
   string fileNameTime(argv[2]);
-  Graph g, h, r, original;
+  SafeGraph g, h, r, original;
   int workers;
   original.readGraph(fileName);
   original.fillDiagonals(original.getNodes());
@@ -103,7 +104,7 @@ int main(int argc, char **argv) {
   // Logaritmic implementation
   workers = logMult(h.getNodes(), original, h, r);
   cout << "---------Final Graph (Logaritmic)----------" << endl;
-  h.print();
+  //h.print();
 
   // if (compare(g, h)) cout << "Equal" << endl;
   // else cout << "Not equal" << endl;
