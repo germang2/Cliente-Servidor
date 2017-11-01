@@ -50,6 +50,20 @@ void printMat(const Mat &res){
     }
 }
 
+bool Adiamond(Mat &g1, Mat &g2, int times){
+    bool flag = true;
+    while(times > 0){
+        if(flag)
+            multA0(g1, g1, g2);    
+        else
+            multA0(g2, g2, g1);
+        flag = not(flag);
+        times--;
+    }
+    return flag;      
+    
+}
+
 int main(int argc, char **argv){
     if(argc != 2){
         cerr << "Error!!" << endl;
@@ -68,15 +82,19 @@ int main(int argc, char **argv){
         for(int j =0; j < res[i].size(); j++)
             res[i][j] = infinite;
 
+    bool ans = true;
     {//lack to take the time of execution
         Timer t("multA0");
-        multA0(g, g, res);
+        ans = Adiamond(g, res, 7);
         long elapsedTime = t.elapsed();
         cout << elapsedTime << " ms." << endl;
-        saveTime(elapsedTime);        
+        //saveTime(elapsedTime);        
     }
 
-    printMat(res);
+    if(ans)
+        printMat(res);
+    else
+        printMat(g);
 
     return 0;
 }
