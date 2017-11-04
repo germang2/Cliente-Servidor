@@ -4,10 +4,11 @@
 
 using namespace std;
 
-template <typename K, typename V> class threadsafe_hash {
+template <typename K, typename V>
+class threadsafe_hash {
 private:
   mutable mutex mut;
-  unordered_map<K, V> data;
+  unordered_map<K,V> data;
   condition_variable data_cond;
 
 public:
@@ -50,11 +51,6 @@ public:
     return true;
   }
 
-  V &get(K key) {
-    lock_guard<mutex> lk(mut);
-    return data[key];
-  }
-
   shared_ptr<V> try_get(K key) {
     lock_guard<mutex> lk(mut);
     if (data.empty())
@@ -63,8 +59,20 @@ public:
     return res;
   }
 
+  V &get(K key) {
+    lock_guard<mutex> lk(mut);
+    return data[key];
+  }
+
   int count(K key) {
     lock_guard<mutex> lk(mut);
     return data.count(key);
   }
+
+  void print() {
+    for (auto& e : data) {
+      cout << e.first << " -> " << e.second << endl;
+    }
+  }
+
 };

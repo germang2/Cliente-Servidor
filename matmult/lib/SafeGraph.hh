@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <vector>
+#include <unordered_map>
 #include <map>
 #include <condition_variable>
 #include <mutex>
@@ -10,24 +10,23 @@ using namespace std;
 
 struct SafeGraph {
 
-  vector<map<int, int>> m;
+  unordered_map<int, map<int, int>> m;
   int nodes;
-  mutable mutex mut;
+  recursive_mutex mut;
   condition_variable data_cond;
 
   SafeGraph() {
     nodes = 0;
   }
 
-  SafeGraph(vector<map<int, int>> another) {
+  SafeGraph(unordered_map<int, map<int, int>> another) {
     m = another;
   }
 
   void insert(int u, int v, int w) {
-    lock_guard<mutex> lk(mut);
-    if (m[u].size() > 0) {
-      m[u][v] = w;
-    } else {
+    lock_guard<recursive_mutex> lk(mut);
+    if (exists(u)) m[u][v] = w;
+    else {
       map<int,int> m2;
       m2[v] = w;
       m[u] = m2;
@@ -40,11 +39,12 @@ struct SafeGraph {
   }
 
   int getNodes() {
-    lock_guard<mutex> lk(mut);
+    lock_guard<recursive_mutex> lk(mut);
     return nodes;
   }
 
-  map<int, int> getMap(int key) {
+  map<int,int> getMap(int key) {
+    lock_guard<recursive_mutex> lk(mut);
     return m[key];
   }
 
@@ -58,7 +58,6 @@ struct SafeGraph {
         int n, edges;
         iss >> s1 >> s2 >> n >> edges;
         setNodes(n);
-        m.resize(n);
         cout << "Graph with " << nodes << " nodes" << endl;
       } else if (line[0] == 'a') {
         char e;
@@ -73,9 +72,15 @@ struct SafeGraph {
     for (int i = 0; i < nodes; i++) insert(i, i, 0);
   }
 
+  bool exists(int key) {
+    lock_guard<recursive_mutex> lk(mut);
+    return (m.count(key) > 0);
+  }
+
   bool exists(int u_key, int v_key) {
-    lock_guard<mutex> lk(mut);
-    return (m[u_key].count(v_key));
+    lock_guard<recursive_mutex> lk(mut);
+    if (exists(u_key)) return (m[u_key].count(v_key) > 0);
+    else return false;
   }
 
   void clear() {
@@ -86,24 +91,24 @@ struct SafeGraph {
   }
 
   int getValue(int u_key, int v_key) {
-    lock_guard<mutex> lk(mut);
+    lock_guard<recursive_mutex> lk(mut);
     return m[u_key][v_key];
   }
 
   int size() {
-    lock_guard<mutex> lk(mut);
+    lock_guard<recursive_mutex> lk(mut);
     return m.size();
   }
 
   int size(int key) {
-    lock_guard<mutex> lk(mut);
+    lock_guard<recursive_mutex> lk(mut);
     return m[key].size();
   }
 
   void print() {
-    for (int i = 0; i < size(); i++) {
-      cout << i << " -> ";
-      for (auto& edge : m[i]) {
+    for (auto& u : m) {
+      cout << u.first << " -> ";
+      for (auto& edge : u.second) {
         cout << " [" << edge.first << " : " << edge.second << "]";
       }
       cout << endl;
